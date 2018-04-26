@@ -1,0 +1,9 @@
+[package]
+name = "akame"
+version = "0.1.0"
+authors = ["Hideo Hattori <hhatto.jp@gmail.com>"]
+
+[dependencies]
+redis = "0.8.0"
+lazy_static = "1.0"
+chrono = "0.4"
