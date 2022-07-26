@@ -1,16 +1,14 @@
 #[macro_use]
 extern crate lazy_static;
 
-use std::time::Duration;
-use std::collections::HashMap;
-use redis::InfoDict;
+use chrono::{DateTime, NaiveDateTime, Utc};
 use redis::FromRedisValue;
-use chrono::{NaiveDateTime, DateTime, Utc};
+use redis::InfoDict;
+use std::collections::HashMap;
+use std::time::Duration;
 
 lazy_static! {
-    static ref IGNORE_COMMANDS: Vec<&'static str> = {
-        vec!["SLOWLOG", "INFO"]
-    };
+    static ref IGNORE_COMMANDS: Vec<&'static str> = { vec!["SLOWLOG", "INFO"] };
 }
 
 #[derive(Default, Debug)]
@@ -21,7 +19,10 @@ struct RedisVersion {
 }
 
 fn get_version(conn: &redis::Connection) -> Option<RedisVersion> {
-    let info: InfoDict = redis::cmd("INFO").arg("server").query(conn).expect("fail info command");
+    let info: InfoDict = redis::cmd("INFO")
+        .arg("server")
+        .query(conn)
+        .expect("fail info command");
     let version_str = info.get("redis_version").unwrap_or_else(|| "".to_string());
     if version_str.is_empty() {
         None
@@ -42,8 +43,8 @@ struct RedisSlowlog {
     timestamp: u64,
     exec_time: Duration,
     cmd: Vec<String>,
-    address: String,        // support by Redis 4.0 or greater
-    client_name: String,    // support by Redis 4.0 or greater
+    address: String,     // support by Redis 4.0 or greater
+    client_name: String, // support by Redis 4.0 or greater
 }
 
 fn get_slowlogs(conn: &redis::Connection, num: usize, version: usize) -> Vec<RedisSlowlog> {
@@ -55,7 +56,8 @@ fn get_slowlogs(conn: &redis::Connection, num: usize, version: usize) -> Vec<Red
         .expect("fail slowlog command");
     for raw_slowlog in raw_slowlogs.iter() {
         let slowlog = if version >= 4 {
-            let s: (u64, u64, u64, Vec<String>, String, String) = FromRedisValue::from_redis_value(raw_slowlog).unwrap();
+            let s: (u64, u64, u64, Vec<String>, String, String) =
+                FromRedisValue::from_redis_value(raw_slowlog).unwrap();
             RedisSlowlog {
                 id: s.0,
                 timestamp: s.1,
@@ -65,7 +67,8 @@ fn get_slowlogs(conn: &redis::Connection, num: usize, version: usize) -> Vec<Red
                 client_name: s.5,
             }
         } else {
-            let s: (u64, u64, u64, Vec<String>) = FromRedisValue::from_redis_value(raw_slowlog).unwrap();
+            let s: (u64, u64, u64, Vec<String>) =
+                FromRedisValue::from_redis_value(raw_slowlog).unwrap();
             RedisSlowlog {
                 id: s.0,
                 timestamp: s.1,
@@ -75,7 +78,7 @@ fn get_slowlogs(conn: &redis::Connection, num: usize, version: usize) -> Vec<Red
             }
         };
         if IGNORE_COMMANDS.contains(&slowlog.cmd[0].to_uppercase().as_str()) {
-            continue
+            continue;
         }
         slowlogs.push(slowlog);
     }
@@ -84,7 +87,9 @@ fn get_slowlogs(conn: &redis::Connection, num: usize, version: usize) -> Vec<Red
 
 fn main() {
     let client = redis::Client::open("redis://127.0.0.1").expect("fail connect redis");
-    let conn = client.get_connection().expect("fail to get redis connection");
+    let conn = client
+        .get_connection()
+        .expect("fail to get redis connection");
     let redis_version = get_version(&conn);
     match redis_version {
         Some(ref v) => println!("redis version: {}.{}.{}", v.major, v.minor, v.patch),
@@ -101,14 +106,19 @@ fn main() {
         let slowlogs = get_slowlogs(&conn, 100, redis_version_major);
         for slowlog in slowlogs {
             if !all_slowlogs.contains_key(&slowlog.id) {
-                let dt = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(slowlog.timestamp as i64, 0), Utc);
-                println!("[{:?}] id={}, time={:.1}[ms], cmd='{:?}', address={}, name={}",
-                         dt,
-                         slowlog.id,
-                         slowlog.exec_time.subsec_nanos() as f64 * 1e-6,
-                         slowlog.cmd,
-                         slowlog.address,
-                         slowlog.client_name);
+                let dt = DateTime::<Utc>::from_utc(
+                    NaiveDateTime::from_timestamp(slowlog.timestamp as i64, 0),
+                    Utc,
+                );
+                println!(
+                    "[{:?}] id={}, time={:.1}[ms], cmd='{:?}', address={}, name={}",
+                    dt,
+                    slowlog.id,
+                    slowlog.exec_time.subsec_nanos() as f64 * 1e-6,
+                    slowlog.cmd,
+                    slowlog.address,
+                    slowlog.client_name
+                );
                 all_slowlogs.insert(slowlog.id, slowlog);
             }
         }
