@@ -1,7 +1,5 @@
 #[macro_use]
 extern crate lazy_static;
-extern crate redis;
-extern crate chrono;
 
 use std::time::Duration;
 use std::collections::HashMap;
