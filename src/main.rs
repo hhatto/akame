@@ -106,10 +106,11 @@ fn main() {
         let slowlogs = get_slowlogs(&conn, 100, redis_version_major);
         for slowlog in slowlogs {
             if !all_slowlogs.contains_key(&slowlog.id) {
-                let dt = DateTime::<Utc>::from_utc(
-                    NaiveDateTime::from_timestamp(slowlog.timestamp as i64, 0),
-                    Utc,
-                );
+                let ndt = NaiveDateTime::from_timestamp_opt(slowlog.timestamp as i64, 0);
+                if ndt.is_none() {
+                    continue;
+                }
+                let dt = DateTime::<Utc>::from_utc(ndt.unwrap(), Utc);
                 println!(
                     "[{:?}] id={}, time={:.1}[ms], cmd='{:?}', address={}, name={}",
                     dt,
