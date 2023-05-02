@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 lazy_static! {
-    static ref IGNORE_COMMANDS: Vec<&'static str> = { vec!["SLOWLOG", "INFO"] };
+    static ref IGNORE_COMMANDS: Vec<&'static str> = vec!["SLOWLOG", "INFO"];
 }
 
 #[derive(Default, Debug)]
